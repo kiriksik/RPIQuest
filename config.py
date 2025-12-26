@@ -1,8 +1,8 @@
 # ====== ОБЩИЕ НАСТРОЙКИ ======
 
 APP_TITLE = "RPI Quest Control"
-SCREEN_WIDTH = 800
-SCREEN_HEIGHT = 1000
+SCREEN_WIDTH = 1280
+SCREEN_HEIGHT = 720
 
 
 # ====== ЭКРАН ЗАГРУЗКИ ======
@@ -20,15 +20,15 @@ OPERATOR_PASSWORD = "4848"
 
 # ====== УРОВЕНЬ ВОДЫ ======
 
-LEVEL_MIN = 500
-LEVEL_MAX = 2000
-LEVEL_ALARM = 3000
+LEVEL_MIN = 0
+LEVEL_MAX = 1000
+LEVEL_ALARM = 1300
 ALARM_DELAY = 5000      # 5 секунд
 FAST_RISE_INTERVAL = 500  # быстрый рост воды (0.5 сек)
 FAST_RISE_STEP = 200
 
 
-LEVEL_RISE_INTERVAL = 1_000     # мс (10 секунд)
+LEVEL_RISE_INTERVAL = 40     # мс (10 секунд)
 LEVEL_DROP_TIME = 2_000          # мс (3 секунды)
 ALARM_DELAY = 1_000               # мс (5 секунд)
 

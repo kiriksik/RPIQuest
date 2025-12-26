@@ -3,6 +3,7 @@ from gpio_mock import GaletteMock
 from styles import WIN_BG, WIN_DARK, WIN_LIGHT, WIN_BLACK, DESKTOP_BG, TITLE_BG_ACTIVE, TITLE_BG_INACTIVE, TITLE_FG, FONT_NORMAL, FONT_TITLE, FONT_BIG
 from widgets import WinButton, WinWindow
 from game_logic import GameState
+from control_panel import ControlPanel
 from config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, APP_TITLE,
     LEVEL_MAX, LEVEL_RISE_INTERVAL, ALARM_DELAY,
@@ -97,8 +98,6 @@ class App:
         password = self.entry.get()
         if self.state.check_password(password):
             self.show_control_panel()
-            self.update_water()
-            self.schedule_level_rise()
         else:
             self.error_label.config(text="ACCESS DENIED")
             self.entry.delete(0, tk.END)
@@ -106,79 +105,32 @@ class App:
     # ================== ПАНЕЛЬ УПРАВЛЕНИЯ ==================
     def show_control_panel(self):
         self.clear_frame()
-
-        title_frame = tk.Frame(self.frame, bg=WIN_BG, bd=2, relief="sunken")
-        title_frame.pack(pady=10)
-        self.title_label = tk.Label(title_frame, text="CONTROL PANEL\nSHUTTER #1", fg=WIN_BLACK, bg=WIN_BG, font=FONT_BIG)
-        self.title_label.pack(padx=5, pady=5)
-
-        self.canvas = tk.Canvas(self.frame, width=300, height=400, bg=WIN_BG, highlightthickness=2, highlightbackground=WIN_BLACK, relief="sunken")
-        self.canvas.pack(pady=20)
-
-        self.pos_label = tk.Label(self.frame, text="Position: 1", fg=WIN_BLACK, bg=WIN_BG, font=FONT_NORMAL)
-        self.pos_label.pack(pady=5)
-        self.stage_label = tk.Label(self.frame, text=f"Required: {RECOMMENDED_POSITIONS[self.state.stage_index]}", fg="yellow", bg=WIN_BG, font=FONT_NORMAL)
-        self.stage_label.pack(pady=5)
-        self.status_label = tk.Label(self.frame, text="Status: READY", fg="green", bg=WIN_BG, font=FONT_NORMAL)
-        self.status_label.pack(pady=5)
-
-        # Кнопки галетника с 3D
-        buttons_frame = tk.Frame(self.frame, bg=WIN_BG)
-        buttons_frame.pack(pady=10)
-        for i in range(1, 12):
-            btn = WinButton(buttons_frame, text=str(i), command=lambda p=i: self.on_galette_change(p), width=40, height=25)
-            btn.grid(row=(i - 1) // 6, column=(i - 1) % 6, padx=2, pady=2)
-
-        self.water_rect = self.canvas.create_rectangle(50, 400, 250, 400, fill="blue")
-
-    def update_water(self):
-        level_ratio = self.state.level / LEVEL_MAX
-        height = int(400 * level_ratio)
-        self.canvas.coords(self.water_rect, 50, 400 - height, 250, 400)
+        self.panel = ControlPanel(
+            self.frame,
+            self.state,
+            on_alarm=self.show_alarm_screen
+        )
+        self.panel.pack(fill="both", expand=True)
 
     def schedule_level_rise(self):
         if not self.state.level_running:
             return
+
         if self.state.alarm_mode:
             self.state.increase_alarm_level()
-            self.update_water()
-            if self.state.alarm_triggered:
-                self.show_alarm_screen()
-                return
-            self.root.after(FAST_RISE_INTERVAL, self.schedule_level_rise)
         else:
-            self.state.increase_level()
-            self.update_water()
-            self.root.after(LEVEL_RISE_INTERVAL, self.schedule_level_rise)
+            self.state.increase_levels()
 
-    def on_galette_change(self, pos: int):
-        self.galette.set_position(pos)
-        before_stage = self.state.stage_index
-        self.state.set_galette_position(pos)
-        self.pos_label.config(text=f"Position: {pos}")
-        if self.state.stage_index > before_stage:
-            self.status_label.config(text="Status: POSITION ACCEPTED", fg="green")
-            self.update_water()
-        else:
-            if self.state.level < LEVEL_MAX:
-                self.status_label.config(text="Status: LEVEL TOO LOW", fg="orange")
-            else:
-                self.status_label.config(text="Status: WRONG POSITION", fg="red")
-        if self.state.stage_index < len(RECOMMENDED_POSITIONS):
-            self.stage_label.config(text=f"Required: {RECOMMENDED_POSITIONS[self.state.stage_index]}")
-        else:
-            self.stage_label.config(text="Sequence complete")
-            self.status_label.config(text="Status: COMPLETE", fg="cyan")
+        self.update_water()
+
+        if self.state.alarm_triggered:
+            self.show_alarm_screen()
+            return
+
+        self.root.after(LEVEL_RISE_INTERVAL, self.schedule_level_rise)
+
 
     # ================== АВАРИЙНЫЙ ЭКРАН ==================
-    def show_alarm_screen(self):
-        self.state.level_running = False
-        self.clear_frame()
-        self.alarm_label = tk.Label(self.frame, text="EMERGENCY STOP", fg="red", bg=WIN_BG, font=FONT_BIG)
-        self.alarm_label.pack(pady=40)
-        self.sub_label = tk.Label(self.frame, text="CRITICAL WATER LEVEL", fg="red", bg=WIN_BG, font=FONT_NORMAL)
-        self.sub_label.pack()
-        self.root.after(ALARM_DELAY, self.show_error_dialog)
 
     def show_error_dialog(self):
         error = tk.Toplevel(self.root)
@@ -222,6 +174,32 @@ class App:
         label = tk.Label(win, text="Calculator\n(not implemented)", bg=WIN_BG, fg=WIN_BLACK, font=FONT_NORMAL)
         label.pack(expand=True)
 
+    # ================== АВАРИЙНЫЙ ЭКРАН ==================
+    def show_alarm_screen(self):
+        self.state.level_running = False
+        self.clear_frame()
+
+        self.alarm_label = tk.Label(
+            self.frame,
+            text="АВАРИЙНАЯ ОСТАНОВКА",
+            fg="red",
+            bg=WIN_BG,
+            font=FONT_BIG
+        )
+        self.alarm_label.pack(pady=40)
+
+        self.sub_label = tk.Label(
+            self.frame,
+            text="КРИТИЧЕСКИЙ УРОВЕНЬ ВОДЫ",
+            fg="red",
+            bg=WIN_BG,
+            font=FONT_NORMAL
+        )
+        self.sub_label.pack()
+
+        # через паузу — системная ошибка
+        self.root.after(2000, self.show_error_dialog)
+
     # ================== УТИЛИТЫ ==================
     def clear_frame(self):
         for widget in self.frame.winfo_children():
@@ -229,3 +207,4 @@ class App:
 
     def run(self):
         self.root.mainloop()
+

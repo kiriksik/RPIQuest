@@ -1,4 +1,5 @@
 from config import LEVEL_MIN, LEVEL_MAX, RECOMMENDED_POSITIONS, LEVEL_ALARM
+import random
 
 class GameState:
     def __init__(self):
@@ -7,10 +8,14 @@ class GameState:
     def reset(self):
         self.started = False
         self.password_ok = False
-        self.level = LEVEL_MIN
+
+        # 3 бака
+        self.tanks = [LEVEL_MIN, LEVEL_MIN, LEVEL_MIN]
+
         self.level_running = False
         self.stage_index = 0
         self.current_position = 1
+
         self.alarm_mode = False
         self.alarm_triggered = False
 
@@ -24,25 +29,36 @@ class GameState:
             return True
         return False
 
-    def increase_level(self, step=100, max_level=LEVEL_MAX):
+    # === ПЛАВНЫЙ РОСТ УРОВНЕЙ ===
+    def increase_levels(self, step=20):
         if not self.level_running:
             return
-        if self.level < max_level:
-            self.level += step
-            if self.level > max_level:
-                self.level = max_level
+
+        for i in range(3):
+            if self.tanks[i] < LEVEL_MAX:
+                self.tanks[i] += random.randint(step // 2, step)
+                if self.tanks[i] > LEVEL_MAX:
+                    self.tanks[i] = LEVEL_MAX
+
+    def max_level(self):
+        return max(self.tanks)
 
     def set_galette_position(self, pos: int):
         self.current_position = pos
+
         if self.stage_index >= len(RECOMMENDED_POSITIONS):
             return
+
         required = RECOMMENDED_POSITIONS[self.stage_index]
-        if pos == required and self.level >= LEVEL_MAX:
+
+        # ✅ УСЛОВИЕ: ХОТЯ БЫ ОДИН БАК ПОЛОН
+        if pos == required and self.max_level() >= LEVEL_MAX:
             self.on_correct_position()
 
     def on_correct_position(self):
-        self.level = LEVEL_MIN
+        self.tanks = [LEVEL_MIN, LEVEL_MIN, LEVEL_MIN]
         self.stage_index += 1
+
         if self.stage_index >= len(RECOMMENDED_POSITIONS):
             self.start_alarm()
 
@@ -53,8 +69,9 @@ class GameState:
     def increase_alarm_level(self):
         if not self.alarm_mode:
             return
-        if self.level < LEVEL_ALARM:
-            self.level += 200
-            if self.level >= LEVEL_ALARM:
-                self.level = LEVEL_ALARM
+
+        for i in range(3):
+            self.tanks[i] += 50
+            if self.tanks[i] >= LEVEL_ALARM:
+                self.tanks[i] = LEVEL_ALARM
                 self.alarm_triggered = True
