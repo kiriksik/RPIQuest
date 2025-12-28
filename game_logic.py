@@ -51,8 +51,7 @@ class GameState:
 
         required = RECOMMENDED_POSITIONS[self.stage_index]
 
-        # ✅ УСЛОВИЕ: ХОТЯ БЫ ОДИН БАК ПОЛОН
-        if pos == required and self.max_level() >= LEVEL_MAX:
+        if pos == required and self.max_level() >= LEVEL_MAX * 0.8:
             self.on_correct_position()
 
     def on_correct_position(self):

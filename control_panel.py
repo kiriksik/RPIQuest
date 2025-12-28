@@ -1,6 +1,5 @@
 import tkinter as tk
 from styles import WIN_BG, WIN_DARK, WIN_LIGHT, WIN_BLACK, DESKTOP_BG, TITLE_BG_ACTIVE, TITLE_FG, FONT_NORMAL, FONT_TITLE, FONT_BIG
-from widgets import WinButton
 from game_logic import GameState
 from config import LEVEL_MAX, RECOMMENDED_POSITIONS, LEVEL_RISE_INTERVAL, ALARM_DELAY, FAST_RISE_INTERVAL, SCREEN_HEIGHT, SCREEN_WIDTH
 
@@ -91,6 +90,9 @@ class ControlPanel(tk.Frame):
         self.canvas_h = canvas_h
         self.canvas_w = canvas_w
 
+        self.water_x1 = int(canvas_w * 0.42)
+        self.water_x2 = int(canvas_w * 0.75)
+
         self.scale_top = int(canvas_h * 0.05)
         self.scale_bottom = int(canvas_h * 0.95)
 
@@ -136,9 +138,9 @@ class ControlPanel(tk.Frame):
 
         # вода
         self.water_rect = self.canvas.create_rectangle(
-            int(canvas_w * 0.45),
+            self.water_x1,
             self.scale_bottom,
-            int(canvas_w * 0.65),
+            self.water_x2,
             self.scale_bottom,
             fill="blue",
             outline=""
@@ -232,21 +234,18 @@ class ControlPanel(tk.Frame):
         self.update_panel()
         self.after(100, self.schedule_update)
 
+    # ===== UPDATE =====
     def update_panel(self):
         ratio = max(self.state.tanks) / LEVEL_MAX
         water_h = int((self.scale_bottom - self.scale_top) * ratio)
 
-        self.canvas.update_idletasks()  # чтобы получить реальную ширину
-        cw = self.canvas.winfo_width()
-
         self.canvas.coords(
             self.water_rect,
-            cw * 0.45,
+            self.water_x1,
             self.scale_bottom - water_h,
-            cw * 0.65,
+            self.water_x2,
             self.scale_bottom
         )
-
 
         self.status_label.config(
             text="Состояние: " + ("Движение" if self.state.level_running else "Останов")
@@ -258,20 +257,48 @@ class ControlPanel(tk.Frame):
                 text=f"Рекомендуемое положение: {RECOMMENDED_POSITIONS[self.state.stage_index]}"
             )
 
-        if self.state.alarm_triggered:
-            if not self.alarm_fired:
-                self.alarm_fired = True
-                self.controls_locked = True
-                self.alarm_label.place(
-                    x=self.CENTER_X - 120,
-                    y=self.height - self.BOTTOM_MARGIN + 10,
-                    width=240,
-                    height=30
-                )
-                self.after(ALARM_DELAY, self.fire_final_alarm)
+        # === ALARM ===
+        if self.state.alarm_triggered and not self.alarm_fired:
+            self.alarm_fired = True
+            self.controls_locked = True
+            self.alarm_label.place(
+                x=self.CENTER_X - 120,
+                y=self.height - self.BOTTOM_MARGIN + 10,
+                width=240,
+                height=30
+            )
 
+            # Добавляем кнопку закрытия тревоги
+            self.alarm_ok_btn = tk.Label(
+                self,
+                text="OK",
+                bg="white",
+                fg="black",
+                bd=1,
+                relief="raised",
+                font=FONT_NORMAL
+            )
+            self.alarm_ok_btn.place(
+                x=self.CENTER_X + 130,
+                y=self.height - self.BOTTOM_MARGIN + 10,
+                width=40, height=30
+            )
+            self.alarm_ok_btn.bind("<Button-1>", self.close_alarm)
+
+        # Мигаем текст тревоги
+        if self.alarm_fired:
             self.alarm_visible = not self.alarm_visible
             self.alarm_label.config(fg="white" if self.alarm_visible else "red")
+
+    def close_alarm(self, event=None):
+        # Скрываем тревогу
+        self.alarm_label.place_forget()
+        if hasattr(self, "alarm_ok_btn"):
+            self.alarm_ok_btn.place_forget()
+        self.controls_locked = False
+        self.state.alarm_mode = False
+        self.alarm_fired = False
+        self.alarm_visible = False
 
     def fire_final_alarm(self):
         self.alive = False

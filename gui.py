@@ -1,11 +1,15 @@
 import tkinter as tk
+
+from widgets.login_window import LoginWindowContent
+from widgets.window.flags import WindowFlags
+from desktop.desktop import Desktop
 from gpio_mock import GaletteMock
 from styles import WIN_BG, WIN_DARK, WIN_LIGHT, WIN_BLACK, DESKTOP_BG, TITLE_BG_ACTIVE, TITLE_BG_INACTIVE, TITLE_FG, FONT_NORMAL, FONT_TITLE, FONT_BIG
-from widgets import WinButton, WinWindow
 from game_logic import GameState
 from control_panel import ControlPanel
 from config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, APP_TITLE,
+    LEVEL_MAX, LEVEL_RISE_INTERVAL, ALARM_DELAY,
     LEVEL_MAX, LEVEL_RISE_INTERVAL, ALARM_DELAY,
     RECOMMENDED_POSITIONS, FAST_RISE_INTERVAL,
     STORY_TEXT, STEP_AMOUNT, STEP_DELAY
@@ -28,71 +32,40 @@ class App:
 
         # запуск экрана загрузки
         self.root.after(100, self.show_boot_screen)
-
+        # self.show_desktop()
     # ================== ЗАГРУЗКА ==================
     def show_boot_screen(self):
         self.clear_frame()
-        self.boot_label = tk.Label(
-            self.frame,
-            text="Microsoft Windows 3.1",
-            fg=WIN_LIGHT,
-            bg=WIN_BG,
-            font=FONT_BIG
-        )
-        self.boot_label.pack(pady=50)
+        from boot.bios_boot import BIOSBoot
+        BIOSBoot(self.frame, on_complete=self.show_password_screen, width=SCREEN_WIDTH, height=SCREEN_HEIGHT)
 
-        # Прогресс-бар с 3D рамкой
-        self.progress_canvas = tk.Canvas(
-            self.frame,
-            width=400,
-            height=30,
-            bg=WIN_BG,
-            highlightthickness=2,
-            highlightbackground=WIN_BLACK,
-            relief="sunken"
-        )
-        self.progress_canvas.pack(pady=20)
-
-        self.progress_rect = self.progress_canvas.create_rectangle(0, 0, 0, 30, fill=WIN_LIGHT)
-        self.boot_progress = 0
-        self.blink_boot_label()
-        self.boot_step()
-
-    def boot_step(self):
-        if not hasattr(self, "progress_canvas") or not self.progress_canvas.winfo_exists():
-            return
-        if self.boot_progress >= 100:
-            self.show_password_screen()
-            return
-        self.boot_progress += STEP_AMOUNT
-        width = int(400 * self.boot_progress / 100)
-        self.progress_canvas.coords(self.progress_rect, 0, 0, width, 30)
-        self.root.after(STEP_DELAY, self.boot_step)
-
-    def blink_boot_label(self):
-        if not hasattr(self, "boot_label") or not self.boot_label.winfo_exists():
-            return
-        color = WIN_LIGHT if self.boot_label.cget("fg") == WIN_DARK else WIN_DARK
-        self.boot_label.config(fg=color)
-        self.root.after(200, self.blink_boot_label)
 
     # ================== ПАРОЛЬ ==================
     def show_password_screen(self):
         self.clear_frame()
-        label_frame = tk.Frame(self.frame, bg=WIN_BG, bd=2, relief="sunken")
-        label_frame.pack(pady=50)
-        self.label = tk.Label(label_frame, text="ENTER PASSWORD", fg=WIN_BLACK, bg=WIN_BG, font=FONT_BIG)
-        self.label.pack(padx=10, pady=5)
 
-        entry_frame = tk.Frame(self.frame, bg=WIN_BG, bd=2, relief="sunken")
-        entry_frame.pack()
-        self.entry = tk.Entry(entry_frame, show="*", font=FONT_NORMAL, justify="center", bd=0)
-        self.entry.pack(padx=4, pady=4)
-        self.entry.focus()
+        outer = tk.Frame(
+            self.frame,
+            bg=WIN_BG,
+            bd=2,
+            relief="raised"
+        )
+        outer.place(relx=0.5, rely=0.5, anchor="center", width=320, height=200)
 
-        self.error_label = tk.Label(self.frame, text="", fg="red", bg=WIN_BG, font=FONT_NORMAL)
-        self.error_label.pack(pady=10)
-        self.entry.bind("<Return>", self.check_password)
+        inner = tk.Frame(
+            outer,
+            bg=WIN_BG,
+            bd=2,
+            relief="sunken"
+        )
+        inner.pack(fill="both", expand=True, padx=4, pady=4)
+
+        users = [
+            {"name": "Василий", "avatar": None},
+            {"name": "Оператор", "avatar": None},
+        ]
+
+        LoginWindowContent(inner, self, users).pack(fill="both", expand=True)
 
     def check_password(self, event=None):
         password = self.entry.get()
@@ -105,12 +78,16 @@ class App:
     # ================== ПАНЕЛЬ УПРАВЛЕНИЯ ==================
     def show_control_panel(self):
         self.clear_frame()
+
         self.panel = ControlPanel(
             self.frame,
             self.state,
             on_alarm=self.show_alarm_screen
         )
         self.panel.pack(fill="both", expand=True)
+
+        self.state.level_running = True
+        self.schedule_level_rise()
 
     def schedule_level_rise(self):
         if not self.state.level_running:
@@ -121,7 +98,6 @@ class App:
         else:
             self.state.increase_levels()
 
-        self.update_water()
 
         if self.state.alarm_triggered:
             self.show_alarm_screen()
@@ -134,68 +110,106 @@ class App:
 
     def show_error_dialog(self):
         error = tk.Toplevel(self.root)
-        error.title("System Error")
-        error.geometry("300x150")
-        error.configure(bg=WIN_BG)
-        label = tk.Label(error, text="FATAL ERROR\nSYSTEM HALTED", bg=WIN_BG, fg="black", font=FONT_NORMAL)
-        label.pack(pady=20)
-        btn = WinButton(error, "OK", command=lambda: self.enter_desktop(error), width=80, height=25)
-        btn.pack()
+        error.geometry("420x220")
+        error.resizable(False, False)
+        error.configure(bg="blue")
+        error.grab_set()  # модальное окно
+        error.transient(self.root)
 
-    # ================== РАБОЧИЙ СТОЛ ==================
+        # ===== TITLE BAR =====
+        title_bar = tk.Frame(error, bg="blue", height=28)
+        title_bar.pack(fill="x")
+
+        tk.Label(
+            title_bar,
+            text="ШТИЛЬ МОНИТОР 0.9b",
+            fg="white",
+            bg="blue",
+            font=FONT_TITLE
+        ).pack(side="left", padx=8)
+
+        # ===== CONTENT =====
+        content = tk.Frame(error, bg="white", bd=2, relief="sunken")
+        content.pack(fill="both", expand=True, padx=4, pady=4)
+
+        # ===== STOP SIGN =====
+        canvas = tk.Canvas(content, width=80, height=80, bg="white", highlightthickness=0)
+        canvas.place(x=20, y=40)
+
+        # восьмиугольник STOP
+        stop_points = [
+            20, 0, 60, 0, 80, 20, 80, 60,
+            60, 80, 20, 80, 0, 60, 0, 20
+        ]
+        canvas.create_polygon(stop_points, fill="red", outline="black")
+        canvas.create_text(40, 40, text="STOP", fill="white", font=("Courier", 12, "bold"))
+
+        # ===== TEXT =====
+        tk.Label(
+            content,
+            text="Аварийное завершение\nпрограммы",
+            bg="white",
+            fg="black",
+            font=FONT_BIG,
+            justify="center"
+        ).place(relx=0.6, rely=0.45, anchor="center")
+
+        # ===== OK BUTTON =====
+        ok_btn = tk.Frame(
+            content,
+            bg=WIN_LIGHT,
+            bd=2,
+            relief="raised"
+        )
+        ok_btn.place(relx=0.5, rely=0.82, anchor="center", width=80, height=28)
+
+        ok_label = tk.Label(
+            ok_btn,
+            text="OK",
+            bg=WIN_LIGHT,
+            fg="black",
+            font=FONT_NORMAL
+        )
+        ok_label.pack(expand=True)
+
+        def close_all(event=None):
+            error.destroy()
+            self.show_desktop()
+
+        ok_btn.bind("<Button-1>", close_all)
+        ok_label.bind("<Button-1>", close_all)
+
+        # ================== РАБОЧИЙ СТОЛ ==================
     def enter_desktop(self, error_window):
         error_window.destroy()
         self.show_desktop()
 
     def show_desktop(self):
         self.clear_frame()
-        self.desktop = tk.Frame(self.frame, bg=DESKTOP_BG)
+        self.desktop = Desktop(self.frame, self)
         self.desktop.pack(fill="both", expand=True)
-        win = WinWindow(self.desktop, "Program Manager", 260, 180)
-        win.place(x=40, y=40)
-        WinButton(win.content, "Notepad", command=self.open_notepad, width=100).pack(pady=10)
-        WinButton(win.content, "Calculator", command=self.open_calc, width=100).pack()
 
     def open_notepad(self):
-        win = tk.Toplevel(self.root)
-        win.title("Notepad")
-        win.geometry("600x400")
-        win.configure(bg=WIN_BG)
-        text = tk.Text(win, font=FONT_NORMAL, bg=WIN_LIGHT, fg=WIN_BLACK, relief="sunken", borderwidth=2)
-        text.pack(fill="both", expand=True, padx=4, pady=4)
-        text.insert("1.0", STORY_TEXT)
-        text.config(state="disabled")
+        from apps.notepad import NotepadContent
+        self.desktop.wm.create_window(
+            title="Notepad",
+            content=lambda p: NotepadContent(p, text=STORY_TEXT),
+            size=(120, 100, 500, 350),
+            flags=WindowFlags.WN_DRAGABLE
+        )
 
     def open_calc(self):
-        win = tk.Toplevel(self.root)
-        win.title("Calculator")
-        win.geometry("220x260")
-        win.configure(bg=WIN_BG)
-        label = tk.Label(win, text="Calculator\n(not implemented)", bg=WIN_BG, fg=WIN_BLACK, font=FONT_NORMAL)
-        label.pack(expand=True)
+        from apps.calculator import CalculatorContent
+        self.desktop.wm.create_window(
+            title="Calculator",
+            content=CalculatorContent,
+            size=(160, 120, 220, 260),
+            flags=WindowFlags.WN_DRAGABLE
+        )
 
     # ================== АВАРИЙНЫЙ ЭКРАН ==================
     def show_alarm_screen(self):
-        self.state.level_running = False
-        self.clear_frame()
 
-        self.alarm_label = tk.Label(
-            self.frame,
-            text="АВАРИЙНАЯ ОСТАНОВКА",
-            fg="red",
-            bg=WIN_BG,
-            font=FONT_BIG
-        )
-        self.alarm_label.pack(pady=40)
-
-        self.sub_label = tk.Label(
-            self.frame,
-            text="КРИТИЧЕСКИЙ УРОВЕНЬ ВОДЫ",
-            fg="red",
-            bg=WIN_BG,
-            font=FONT_NORMAL
-        )
-        self.sub_label.pack()
 
         # через паузу — системная ошибка
         self.root.after(2000, self.show_error_dialog)
