@@ -10,7 +10,7 @@ SCREEN_HEIGHT = 720
 BOOT_DURATION_MS = 8000  # 8 секунд всего
 BOOT_STEPS = 100          # 100 шагов
 STEP_DELAY = BOOT_DURATION_MS // BOOT_STEPS  # миллисекунды
-STEP_AMOUNT = 1
+STEP_AMOUNT = 10
 
 
 # ====== ПАРОЛИ ======
@@ -22,11 +22,10 @@ OPERATOR_PASSWORD = "4848"
 
 LEVEL_MIN = 0
 LEVEL_MAX = 1000
+ALARM_LEVEL_MAX = 3000
+FAST_STEP = 150
+FAST_RISE_INTERVAL = 100  # мс
 LEVEL_ALARM = 1300
-ALARM_DELAY = 5000      # 5 секунд
-FAST_RISE_INTERVAL = 500  # быстрый рост воды (0.5 сек)
-FAST_RISE_STEP = 200
-
 
 LEVEL_RISE_INTERVAL = 40     # мс (10 секунд)
 LEVEL_DROP_TIME = 2_000          # мс (3 секунды)
@@ -34,7 +33,8 @@ ALARM_DELAY = 1_000               # мс (5 секунд)
 
 # ====== РЕКОМЕНДОВАННЫЕ ПОЛОЖЕНИЯ ГАЛЕТНИКА ======
 
-RECOMMENDED_POSITIONS = [4, 8, 11]
+RECOMMENDED_POSITIONS = [4, 8]
+FINAL_POSITION = 11
 
 # ====== GPIO (для Raspberry Pi) ======
 

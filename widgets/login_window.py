@@ -44,6 +44,8 @@ class LoginWindowContent(tk.Frame):
         self.user_combo.pack(pady=6)
         self.user_combo.bind("<<ComboboxSelected>>", lambda e: self._focus_password())
 
+
+
         # ===== PASSWORD =====
         tk.Label(
             frame,
@@ -63,6 +65,8 @@ class LoginWindowContent(tk.Frame):
         self.pass_entry.pack(pady=4)
         self.pass_entry.bind("<Return>", self._submit)
 
+        self._create_numpad(frame)
+
         # ===== ERROR =====
         self.error_label = tk.Label(
             frame,
@@ -80,6 +84,37 @@ class LoginWindowContent(tk.Frame):
         WinButton(btns, "OK", command=self._submit, width=70).pack(side="left", padx=6)
         WinButton(btns, "Cancel", command=self._cancel, width=70).pack(side="left", padx=6)
 
+    def _create_numpad(self, parent):
+        pad = tk.Frame(parent, bg=WIN_BG)
+        pad.pack(pady=8)
+
+        buttons = [
+            ("1", 0, 0), ("2", 0, 1), ("3", 0, 2),
+            ("4", 1, 0), ("5", 1, 1), ("6", 1, 2),
+            ("7", 2, 0), ("8", 2, 1), ("9", 2, 2),
+            ("←", 3, 0), ("0", 3, 1), ("C", 3, 2),
+        ]
+
+        for text, r, c in buttons:
+            WinButton(
+                pad,
+                text,
+                width=45,
+                command=lambda t=text: self._numpad_press(t)
+            ).grid(row=r, column=c, padx=4, pady=4)
+
+    def _numpad_press(self, key):
+        if key.isdigit():
+            self.password_var.set(self.password_var.get() + key)
+
+        elif key == "←":
+            self.password_var.set(self.password_var.get()[:-1])
+
+        elif key == "C":
+            self.password_var.set("")
+
+        self.pass_entry.focus()
+
     def _focus_password(self):
         self.pass_entry.focus()
         self.error_label.config(text="")
@@ -89,6 +124,9 @@ class LoginWindowContent(tk.Frame):
         password = self.password_var.get()
 
         if user == "Василий" and password == "2018":
+            self.app.server.send("passwordOk")
+            self.app.show_control_panel()
+
             self.app.show_control_panel()
         else:
             self.error_label.config(text="ACCESS DENIED")

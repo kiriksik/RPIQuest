@@ -1,12 +1,14 @@
 import tkinter as tk
 
+from control_panel.control_panel import ControlPanel
+from control_panel.alarm import AlarmWindow
 from widgets.login_window import LoginWindowContent
 from widgets.window.flags import WindowFlags
 from desktop.desktop import Desktop
 from gpio_mock import GaletteMock
 from styles import WIN_BG, WIN_DARK, WIN_LIGHT, WIN_BLACK, DESKTOP_BG, TITLE_BG_ACTIVE, TITLE_BG_INACTIVE, TITLE_FG, FONT_NORMAL, FONT_TITLE, FONT_BIG
 from game_logic import GameState
-from control_panel import ControlPanel
+from network.client import ServerClient
 from config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, APP_TITLE,
     LEVEL_MAX, LEVEL_RISE_INTERVAL, ALARM_DELAY,
@@ -18,7 +20,11 @@ from config import (
 
 class App:
     def __init__(self):
+        self.server = ServerClient(host="localhost", port=8000)
+        self.server.on_command = self.handle_server_command
+        self.server.connect()
         self.root = tk.Tk()
+        self.level_max_sent = False
         self.root.title(APP_TITLE)
         self.root.geometry(f"{SCREEN_WIDTH}x{SCREEN_HEIGHT}")
         self.root.configure(bg=WIN_BG)
@@ -31,13 +37,60 @@ class App:
         self.frame.pack(fill="both", expand=True)
 
         # запуск экрана загрузки
-        self.root.after(100, self.show_boot_screen)
+        # self.root.after(100, self.show_boot_screen)
+        # self.poll_galette()
+        self.show_black_screen()
         # self.show_desktop()
     # ================== ЗАГРУЗКА ==================
+    def handle_server_command(self, cmd: str):
+        """Обрабатываем команды, как будто пришли с сервера"""
+        print(f"[APP] Обрабатываю команду: {cmd}")
+
+        if cmd == "startPC":
+            self.show_boot_screen()
+        elif cmd == "reset":
+            self.state.reset()
+            self.show_black_screen()
+        elif cmd == "exit":
+            self.root.quit()
+        elif cmd == "passPC":
+            self.show_desktop()
+        elif cmd == "passProjector":
+            # включаем проектор в mock
+            self.server.send("projectorOn")
+            print("[PROJECTOR] Включен (mock)")
+        else:
+            print(f"[APP] Неизвестная команда: {cmd}")
+
+    def show_black_screen(self):
+        self.clear_frame()
+        black = tk.Frame(self.frame, bg="black")
+        black.pack(fill="both", expand=True)
+
     def show_boot_screen(self):
         self.clear_frame()
         from boot.bios_boot import BIOSBoot
         BIOSBoot(self.frame, on_complete=self.show_password_screen, width=SCREEN_WIDTH, height=SCREEN_HEIGHT)
+
+    def poll_galette(self):
+        pos = self.galette.get_position()
+        if pos:
+            self.on_galette_change(pos)
+
+        self.root.after(100, self.poll_galette)
+
+    def handle_correct_position(self):
+        # 1. отправляем позицию
+        pos = RECOMMENDED_POSITIONS[self.state.stage_index - 1]
+        self.server.send(f"pos{pos}")
+        self.server.send("levelMin")
+
+        # 2. сбрасываем флаги
+        self.level_max_sent = False
+
+        # 3. запускаем анимацию падения
+        self.animate_drop()
+        self.state.start_movement()
 
 
     # ================== ПАРОЛЬ ==================
@@ -50,7 +103,13 @@ class App:
             bd=2,
             relief="raised"
         )
-        outer.place(relx=0.5, rely=0.5, anchor="center", width=320, height=200)
+        outer.place(
+            relx=0.5,
+            rely=0.5,
+            anchor="center",
+            width=360,
+            height=420
+        )
 
         inner = tk.Frame(
             outer,
@@ -82,29 +141,55 @@ class App:
         self.panel = ControlPanel(
             self.frame,
             self.state,
-            on_alarm=self.show_alarm_screen
+            app=self,
+            on_alarm=self.show_alarm_screen,
+            on_exit=self.show_desktop
         )
         self.panel.pack(fill="both", expand=True)
 
         self.state.level_running = True
         self.schedule_level_rise()
 
+    def show_alarm_screen(self):
+        self.state.level_running = False
+        if hasattr(self, "panel"):
+            self.panel.show_alarm_frame()
+
+    def on_galette_change(self, pos):
+        result = self.state.set_galette_position(pos)
+
+        if result["result"] == "blocked":
+            return
+
+        self.send_events(result["events"])
+
+        if result["result"] == "correct":
+            self.state.start_movement()
+            self.state.level_running = False
+
+        elif result["result"] == "final":
+            self.state.start_fast_alarm_rise()
+
+    def send_events(self, events):
+        for e in events:
+            self.server.send(e)
+
     def schedule_level_rise(self):
         if not self.state.level_running:
             return
 
-        if self.state.alarm_mode:
-            self.state.increase_alarm_level()
+        if not self.state.alarm_mode:
+            events = self.state.increase_levels(STEP_AMOUNT)
+            self.send_events(events)
         else:
-            self.state.increase_levels()
-
+            events = self.state.increase_alarm_level()
+            self.send_events(events)
 
         if self.state.alarm_triggered:
-            self.show_alarm_screen()
+            self.root.after(ALARM_DELAY, self.show_error_dialog)
             return
 
         self.root.after(LEVEL_RISE_INTERVAL, self.schedule_level_rise)
-
 
     # ================== АВАРИЙНЫЙ ЭКРАН ==================
 
@@ -208,11 +293,17 @@ class App:
         )
 
     # ================== АВАРИЙНЫЙ ЭКРАН ==================
-    def show_alarm_screen(self):
+    def show_alarm_frame(self):
+        if hasattr(self, "alarm_window"):
+            return  # Уже показано
 
+        def on_close_alarm():
+            self.controls_locked = False
+            del self.alarm_window
 
-        # через паузу — системная ошибка
-        self.root.after(2000, self.show_error_dialog)
+        self.controls_locked = True
+        self.alarm_window = AlarmWindow(self, text="КРИТИЧЕСКИЙ УРОВЕНЬ ВОДЫ", on_close=on_close_alarm)
+        self.alarm_window.place(x=100, y=100, width=300, height=150)
 
     # ================== УТИЛИТЫ ==================
     def clear_frame(self):
@@ -221,4 +312,9 @@ class App:
 
     def run(self):
         self.root.mainloop()
+
+
+
+
+
 
