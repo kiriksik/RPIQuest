@@ -368,6 +368,9 @@ class ControlPanel(tk.Frame):
             self.alarm_visible = not self.alarm_visible
             self.alarm_label.config(fg="white" if self.alarm_visible else "red")
 
+        if self.state.current_position:
+            self.update_galette_marker(self.state.current_position)
+
 
     def fire_final_alarm(self):
         self.alive = False

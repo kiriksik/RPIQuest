@@ -123,12 +123,19 @@ class LoginWindowContent(tk.Frame):
         user = self.selected_user.get()
         password = self.password_var.get()
 
+        if user == "Оператор" and password == "4848":
+            print("[ADMIN] EXIT TO OS")
+            self.app.gpio.cleanup()
+            self.app.server.close()
+            self.app.root.quit()
+            return
         if user == "Василий" and password == "2018":
             self.app.server.send("passwordOk")
             self.app.show_control_panel()
 
             self.app.show_control_panel()
         else:
+
             self.error_label.config(text="ACCESS DENIED")
             self.password_var.set("")
             self.pass_entry.focus()

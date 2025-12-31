@@ -35,6 +35,7 @@ class ServerClient:
                     line = line.strip()
                     if line and self.on_command:
                         print("RECV CMD:", line)
+
                         self.on_command(line)
             except Exception as e:
                 print("LISTEN ERROR:", e)

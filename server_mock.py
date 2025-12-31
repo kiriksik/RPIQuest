@@ -18,7 +18,7 @@ def handle_client(conn, addr):
         conn.close()
         print(f"Client disconnected: {addr}")
 
-def start_server(host="localhost", port=8000):
+def start_server(host="0.0.0.0", port=8000):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     s.bind((host, port))
     s.listen()

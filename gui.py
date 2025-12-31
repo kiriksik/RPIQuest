@@ -1,5 +1,7 @@
 import tkinter as tk
 
+
+from hardware.gpio_controller import GPIOController
 from control_panel.control_panel import ControlPanel
 from control_panel.alarm import AlarmWindow
 from widgets.login_window import LoginWindowContent
@@ -20,8 +22,18 @@ from config import (
 
 class App:
     def __init__(self):
-        self.server = ServerClient(host="localhost", port=8000)
-        self.server.on_command = self.handle_server_command
+        self.server = ServerClient(host="192.168.31.76", port=8000)
+        self.gpio = GPIOController(
+            galette_pins=[5, 6, 13, 19, 26, 12, 16, 20, 21, 25, 24],
+            projector_input_pin=18,
+            projector_relay_pin=23,
+
+            on_galette_change=self.on_galette_change,
+            on_projector_on=lambda: self.server.send("projectorOn"),
+            on_projector_off=lambda: self.server.send("projectorOff"),
+        )
+        self.server.on_command = self._on_server_command_threadsafe
+
         self.server.connect()
         self.root = tk.Tk()
         self.level_max_sent = False
@@ -42,25 +54,34 @@ class App:
         self.show_black_screen()
         # self.show_desktop()
     # ================== ЗАГРУЗКА ==================
+    def _on_server_command_threadsafe(self, cmd: str):
+        self.root.after(0, lambda: self.handle_server_command(cmd))
+
     def handle_server_command(self, cmd: str):
-        """Обрабатываем команды, как будто пришли с сервера"""
-        print(f"[APP] Обрабатываю команду: {cmd}")
+        print(f"[APP] CMD FROM SERVER: {cmd}")
 
         if cmd == "startPC":
             self.show_boot_screen()
+
         elif cmd == "reset":
             self.state.reset()
             self.show_black_screen()
+
         elif cmd == "exit":
+            print("[APP] EXIT")
+            self.gpio.cleanup()
+            self.server.close()
             self.root.quit()
+
         elif cmd == "passPC":
             self.show_desktop()
+
         elif cmd == "passProjector":
-            # включаем проектор в mock
+            self.gpio.turn_relay_on()
             self.server.send("projectorOn")
-            print("[PROJECTOR] Включен (mock)")
+
         else:
-            print(f"[APP] Неизвестная команда: {cmd}")
+            print(f"[APP] UNKNOWN CMD: {cmd}")
 
     def show_black_screen(self):
         self.clear_frame()
@@ -79,18 +100,7 @@ class App:
 
         self.root.after(100, self.poll_galette)
 
-    def handle_correct_position(self):
-        # 1. отправляем позицию
-        pos = RECOMMENDED_POSITIONS[self.state.stage_index - 1]
-        self.server.send(f"pos{pos}")
-        self.server.send("levelMin")
 
-        # 2. сбрасываем флаги
-        self.level_max_sent = False
-
-        # 3. запускаем анимацию падения
-        self.animate_drop()
-        self.state.start_movement()
 
 
     # ================== ПАРОЛЬ ==================
