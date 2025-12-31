@@ -36,24 +36,6 @@ ALARM_DELAY = 1_000               # мс (5 секунд)
 RECOMMENDED_POSITIONS = [4, 8]
 FINAL_POSITION = 11
 
-# ====== GPIO (для Raspberry Pi) ======
-
-GALETTE_PINS = {
-    1: 5,
-    2: 6,
-    3: 13,
-    4: 19,
-    5: 26,
-    6: 12,
-    7: 16,
-    8: 20,
-    9: 21,
-    10: 25,
-    11: 24
-}
-
-PROJECTOR_INPUT_PIN = 18
-PROJECTOR_RELAY_PIN = 23
 
 # ====== СЕРВЕР ======
 

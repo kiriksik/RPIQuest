@@ -8,15 +8,13 @@ from widgets.login_window import LoginWindowContent
 from widgets.window.flags import WindowFlags
 from desktop.desktop import Desktop
 from gpio_mock import GaletteMock
-from styles import WIN_BG, WIN_DARK, WIN_LIGHT, WIN_BLACK, DESKTOP_BG, TITLE_BG_ACTIVE, TITLE_BG_INACTIVE, TITLE_FG, FONT_NORMAL, FONT_TITLE, FONT_BIG
+from styles import WIN_BG, WIN_LIGHT, FONT_NORMAL, FONT_TITLE, FONT_BIG
 from game_logic import GameState
 from network.client import ServerClient
 from config import (
     SCREEN_WIDTH, SCREEN_HEIGHT, APP_TITLE,
-    LEVEL_MAX, LEVEL_RISE_INTERVAL, ALARM_DELAY,
-    LEVEL_MAX, LEVEL_RISE_INTERVAL, ALARM_DELAY,
-    RECOMMENDED_POSITIONS, FAST_RISE_INTERVAL,
-    STORY_TEXT, STEP_AMOUNT, STEP_DELAY
+    LEVEL_RISE_INTERVAL, ALARM_DELAY,
+    STORY_TEXT, STEP_AMOUNT
 )
 
 

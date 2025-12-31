@@ -1,5 +1,4 @@
 import tkinter as tk
-from styles import FONT_NORMAL
 import random
 
 

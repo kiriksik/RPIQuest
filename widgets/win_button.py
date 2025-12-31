@@ -1,5 +1,5 @@
 import tkinter as tk
-from styles import WIN_BG, WIN_DARK, WIN_LIGHT, WIN_BLACK, FONT_NORMAL
+from styles import WIN_BG, WIN_DARK, WIN_BLACK, FONT_NORMAL
 
 
 class WinButton(tk.Frame):

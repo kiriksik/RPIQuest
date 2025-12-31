@@ -1,5 +1,5 @@
 import tkinter as tk
-from styles import WIN_BG, WIN_BLACK, FONT_NORMAL
+from styles import WIN_BG, FONT_NORMAL
 
 
 class WinMenuBar(tk.Frame):
