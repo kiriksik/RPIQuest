@@ -88,8 +88,30 @@ class App:
 
     def show_boot_screen(self):
         self.clear_frame()
+
+        def after_bios():
+            self.show_windows_splash()
+
         from boot.bios_boot import BIOSBoot
-        BIOSBoot(self.frame, on_complete=self.show_password_screen, width=SCREEN_WIDTH, height=SCREEN_HEIGHT)
+        BIOSBoot(
+            self.frame,
+            on_complete=after_bios,
+            width=SCREEN_WIDTH,
+            height=SCREEN_HEIGHT
+        )
+
+    def show_windows_splash(self):
+        self.clear_frame()
+
+        from boot.windows_splash import WindowsSplash
+
+        WindowsSplash(
+            self.frame,
+            on_complete=self.show_password_screen,
+            width=SCREEN_WIDTH,
+            height=SCREEN_HEIGHT,
+            duration=2500  # мс
+        )
 
     def poll_galette(self):
         pos = self.galette.get_position()
