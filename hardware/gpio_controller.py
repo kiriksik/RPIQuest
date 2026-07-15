@@ -3,11 +3,22 @@ import time
 
 USING_REAL_GPIO = True
 
+USING_REAL_GPIO = False
+GPIO = None
+
+
 try:
     import RPi.GPIO as GPIO
+
     GPIO.setmode(GPIO.BCM)
+
     USING_REAL_GPIO = True
+
+    print("REAL GPIO MODE")
+
+
 except ImportError:
+
     print("GPIO MOCK MODE")
 
 class GPIOController:
