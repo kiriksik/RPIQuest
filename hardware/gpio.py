@@ -28,7 +28,7 @@ class Galette:
 
     def set_mock_position(self, pos):
         if not USING_REAL_GPIO:
-            self.current = pos
+            self.current = self.current
 
 class Projector:
     def __init__(self, input_pin, relay_pin):

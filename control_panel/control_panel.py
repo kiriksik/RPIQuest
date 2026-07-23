@@ -280,7 +280,7 @@ class ControlPanel(tk.Frame):
         )
 
         # Клик по Canvas
-        self.galette_canvas.bind("<Button-1>", self.click_galette)
+        # self.galette_canvas.bind("<Button-1>", self.click_galette)
 
     def set_galette(self, idx):
         # Обновляем состояние через app
@@ -295,15 +295,15 @@ class ControlPanel(tk.Frame):
         y = self.galette_center + math.sin(angle) * self.galette_radius
         self.galette_canvas.coords(self.galette_marker, self.galette_center, self.galette_center, x, y)
 
-    def click_galette(self, event):
-        # Определяем, на какой сектор кликнули
-        dx = event.x - self.galette_center
-        dy = event.y - self.galette_center
-        angle = math.atan2(dy, dx) + math.pi / 2
-        if angle < 0:
-            angle += 2 * math.pi
-        idx = int(angle / (2 * math.pi) * self.num_positions) + 1
-        self.set_galette(idx)
+    # def click_galette(self, event):
+    #     # Определяем, на какой сектор кликнули
+    #     dx = event.x - self.galette_center
+    #     dy = event.y - self.galette_center
+    #     angle = math.atan2(dy, dx) + math.pi / 2
+    #     if angle < 0:
+    #         angle += 2 * math.pi
+    #     idx = int(angle / (2 * math.pi) * self.num_positions) + 1
+    #     self.set_galette(idx)
 
     # ===== UPDATE =====
     def schedule_update(self):
