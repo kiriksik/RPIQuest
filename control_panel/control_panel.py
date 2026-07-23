@@ -149,53 +149,6 @@ class ControlPanel(tk.Frame):
             outline=""
         )
 
-    # ===== GALETTE =====
-    # def create_galette(self):
-    #     frame_w = int(self.RIGHT_COL_W * 0.6)
-    #     frame_h = int(self.height * 0.45)
-    #
-    #     self.galette_frame = tk.Frame(
-    #         self,
-    #         bg="#C0D0E0",
-    #         bd=2,
-    #         relief="sunken"
-    #     )
-    #     self.galette_frame.place(
-    #         x=self.CENTER_X - frame_w // 2,
-    #         y=self.TOP_MARGIN + self.TOP_OFFSET,
-    #         width=frame_w,
-    #         height=frame_h
-    #     )
-    #
-    #     # подписи min/max
-    #     tk.Label(self.galette_frame, text="min", bg="#C0D0E0").place(x=10, y=frame_h - 30)
-    #     tk.Label(self.galette_frame, text="max", bg="#C0D0E0").place(x=frame_w - 40, y=frame_h - 30)
-    #
-    #     # кнопки галетки
-    #     self.galette_buttons = []
-    #     step = frame_w // 12
-    #     for i in range(1, 12):
-    #         btn = tk.Label(
-    #             self.galette_frame,
-    #             text=str(i),
-    #             width=2,
-    #             bg=WIN_LIGHT,
-    #             bd=2,
-    #             relief="raised",
-    #         )
-    #         btn.place(x=step * i - 10, y=frame_h - 70)
-    #         btn.bind("<Button-1>", lambda e, idx=i: self.set_galette(idx))
-    #         self.galette_buttons.append(btn)
-
-    # def set_galette(self, idx):
-    #     if self.controls_locked:
-    #         return
-    #
-    #     self.app.on_galette_change(idx)
-    #
-    #     for i, b in enumerate(self.galette_buttons):
-    #         b.config(bg="red" if i + 1 == idx else WIN_LIGHT)
-
     # ===== BOTTOM INFO =====
     def create_bottom_labels(self):
         base_y = self.height - self.BOTTOM_MARGIN
@@ -243,9 +196,6 @@ class ControlPanel(tk.Frame):
             height=frame_h
         )
 
-        # подписи min/max
-        # tk.Label(self.galette_frame, text="min", bg="#C0D0E0").place(x=10, y=frame_h - 30)
-        # tk.Label(self.galette_frame, text="max", bg="#C0D0E0").place(x=frame_w - 40, y=frame_h - 30)
         # Canvas для галетки
         size = 200
         self.galette_canvas = tk.Canvas(self.galette_frame, width=size, height=size, bg="#C0D0E0", highlightthickness=0)
@@ -332,6 +282,7 @@ class ControlPanel(tk.Frame):
             self.water_x2,
             self.scale_bottom
         )
+        
         state = ""
         if self.state.moving:
             state = "Движение"
@@ -339,17 +290,21 @@ class ControlPanel(tk.Frame):
             state = "Ошибка"
         else:
             state = "Останов"
-        self.status_label.config(
-            text="Состояние: " + state
-        )
+            
+        self.status_label.config(text="Состояние: " + state)
         self.pos_label.config(text=f"Текущее положение: {self.state.current_position}")
 
-        if self.state.stage_index < len(RECOMMENDED_POSITIONS):
-            next_pos = RECOMMENDED_POSITIONS[self.state.stage_index]
+        # ===== НОВАЯ ЛОГИКА ОТОБРАЖЕНИЯ РЕКОМЕНДАЦИИ =====
+        if self.state.moving:
+            # Вода движется - скрываем рекомендацию
+            self.stage_label.config(text="Ожидание остановки воды...", fg="gray")
         else:
-            next_pos = FINAL_POSITION
-
-        self.stage_label.config(text=f"Рекомендуемое положение: {next_pos}")
+            # Вода не движется - показываем рекомендацию
+            if self.state.stage_index < len(RECOMMENDED_POSITIONS):
+                next_pos = RECOMMENDED_POSITIONS[self.state.stage_index]
+                self.stage_label.config(text=f"Рекомендуемое положение: {next_pos}", fg="yellow")
+            else:
+                self.stage_label.config(text=f"Рекомендуемое положение: {FINAL_POSITION}", fg="yellow")
 
         # === ALARM ===
         if self.state.alarm_triggered and not self.alarm_fired:
@@ -370,7 +325,6 @@ class ControlPanel(tk.Frame):
 
         if self.state.current_position:
             self.update_galette_marker(self.state.current_position)
-
 
     def fire_final_alarm(self):
         self.alive = False
@@ -398,5 +352,3 @@ class ControlPanel(tk.Frame):
             width=300,
             height=150
         )
-
-
