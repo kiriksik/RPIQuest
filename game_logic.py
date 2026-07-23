@@ -11,7 +11,7 @@ class GameState:
 
 
     def reset(self):
-        self.can_turn_galette = False
+        self.can_turn_galette = True
         self.started = False
         self.password_ok = False
 
@@ -93,8 +93,8 @@ class GameState:
         return max(self.tanks)
 
     def set_galette_position(self, pos):
-        if not self.can_turn_galette:
-            return {"result": "blocked", "events": []}
+        # if not self.can_turn_galette:
+        #     return {"result": "blocked", "events": []}
 
         self.current_position = pos
         events = []

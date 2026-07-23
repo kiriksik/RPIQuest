@@ -20,7 +20,7 @@ from config import (
 
 class App:
     def __init__(self):
-        self.server = ServerClient(server_host="192.168.31.241", port=80)
+        self.server = ServerClient(server_host="192.168.0.201", port=80)
         self.gpio = GPIOController(
             galette_pins=[5, 6, 13, 19, 26, 12, 16, 20, 21, 25, 24],
             projector_input_pin=18,

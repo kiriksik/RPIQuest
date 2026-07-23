@@ -8,7 +8,7 @@ class ServerClient:
 
     def __init__(
         self,
-        server_host="192.168.31.241",
+        server_host="192.168.0.201",
         listen_host="0.0.0.0",
         port=80
     ):

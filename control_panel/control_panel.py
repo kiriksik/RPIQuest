@@ -244,8 +244,8 @@ class ControlPanel(tk.Frame):
         )
 
         # подписи min/max
-        tk.Label(self.galette_frame, text="min", bg="#C0D0E0").place(x=10, y=frame_h - 30)
-        tk.Label(self.galette_frame, text="max", bg="#C0D0E0").place(x=frame_w - 40, y=frame_h - 30)
+        # tk.Label(self.galette_frame, text="min", bg="#C0D0E0").place(x=10, y=frame_h - 30)
+        # tk.Label(self.galette_frame, text="max", bg="#C0D0E0").place(x=frame_w - 40, y=frame_h - 30)
         # Canvas для галетки
         size = 200
         self.galette_canvas = tk.Canvas(self.galette_frame, width=size, height=size, bg="#C0D0E0", highlightthickness=0)
@@ -284,8 +284,8 @@ class ControlPanel(tk.Frame):
 
     def set_galette(self, idx):
         # Обновляем состояние через app
-        if self.controls_locked:
-            return
+        # if self.controls_locked:
+        #     return
         self.app.on_galette_change(idx)
         self.update_galette_marker(idx)
 
