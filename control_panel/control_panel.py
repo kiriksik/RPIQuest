@@ -230,7 +230,7 @@ class ControlPanel(tk.Frame):
         )
 
         # Клик по Canvas
-        self.galette_canvas.bind("<Button-1>", self.click_galette)
+        # self.galette_canvas.bind("<Button-1>", self.click_galette)
 
     def set_galette(self, idx):
         # Обновляем состояние через app
