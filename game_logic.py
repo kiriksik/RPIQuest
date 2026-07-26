@@ -22,6 +22,7 @@ class GameState:
         self.tanks = [LEVEL_MIN, LEVEL_MIN, LEVEL_MIN]
 
         self.level_running = False
+        self.waiting_for_fill = True
         self.stage_index = 0
         self.current_position = 1
 
@@ -52,6 +53,7 @@ class GameState:
                 self.drop_levels(STEP_AMOUNT)
             else:
                 self.moving = False
+                self.waiting_for_fill = True
                 self.level_running = True
 
     def check_password(self, password):
@@ -83,9 +85,12 @@ class GameState:
             if not self.moving:
                 self.tanks[i] = min(self.tanks[i] + step, LEVEL_MAX)
 
-        if self.max_level() >= LEVEL_MAX and not self.can_turn_galette:
+        if self.max_level() >= LEVEL_MAX:
+            self.level_running = False
             self.can_turn_galette = True
+            self.waiting_for_fill = False
             events.append("levelMax")
+            self.set_galette_position(self.current_position)
 
         return events
 
@@ -99,6 +104,9 @@ class GameState:
         self.current_position = pos
         events = []
 
+        if self.level_running or self.moving:
+                return {"result": "wait", "events": []}
+                
         if self.stage_index < len(RECOMMENDED_POSITIONS):
             if pos == RECOMMENDED_POSITIONS[self.stage_index]:
                 self.stage_index += 1

@@ -230,12 +230,12 @@ class ControlPanel(tk.Frame):
         )
 
         # Клик по Canvas
-        # self.galette_canvas.bind("<Button-1>", self.click_galette)
+        self.galette_canvas.bind("<Button-1>", self.click_galette)
 
     def set_galette(self, idx):
         # Обновляем состояние через app
-        # if self.controls_locked:
-        #     return
+        if self.controls_locked:
+            return
         self.app.on_galette_change(idx)
         self.update_galette_marker(idx)
 
@@ -245,15 +245,15 @@ class ControlPanel(tk.Frame):
         y = self.galette_center + math.sin(angle) * self.galette_radius
         self.galette_canvas.coords(self.galette_marker, self.galette_center, self.galette_center, x, y)
 
-    # def click_galette(self, event):
-    #     # Определяем, на какой сектор кликнули
-    #     dx = event.x - self.galette_center
-    #     dy = event.y - self.galette_center
-    #     angle = math.atan2(dy, dx) + math.pi / 2
-    #     if angle < 0:
-    #         angle += 2 * math.pi
-    #     idx = int(angle / (2 * math.pi) * self.num_positions) + 1
-    #     self.set_galette(idx)
+    def click_galette(self, event):
+        # Определяем, на какой сектор кликнули
+        dx = event.x - self.galette_center
+        dy = event.y - self.galette_center
+        angle = math.atan2(dy, dx) + math.pi / 2
+        if angle < 0:
+            angle += 2 * math.pi
+        idx = int(angle / (2 * math.pi) * self.num_positions) + 1
+        self.set_galette(idx)
 
     # ===== UPDATE =====
     def schedule_update(self):
@@ -294,18 +294,23 @@ class ControlPanel(tk.Frame):
         self.status_label.config(text="Состояние: " + state)
         self.pos_label.config(text=f"Текущее положение: {self.state.current_position}")
 
-        # ===== НОВАЯ ЛОГИКА ОТОБРАЖЕНИЯ РЕКОМЕНДАЦИИ =====
-        if self.state.moving:
-            # Вода движется - скрываем рекомендацию
-            self.stage_label.config(text="Ожидание остановки воды...", fg="gray")
+        if self.state.moving or self.state.waiting_for_fill:
+            self.stage_label.config(
+                text="Ожидание остановки воды...",
+                fg="gray"
+            )
         else:
-            # Вода не движется - показываем рекомендацию
             if self.state.stage_index < len(RECOMMENDED_POSITIONS):
                 next_pos = RECOMMENDED_POSITIONS[self.state.stage_index]
-                self.stage_label.config(text=f"Рекомендуемое положение: {next_pos}", fg="yellow")
+                self.stage_label.config(
+                    text=f"Рекомендуемое положение: {next_pos}",
+                    fg="yellow"
+                )
             else:
-                self.stage_label.config(text=f"Рекомендуемое положение: {FINAL_POSITION}", fg="yellow")
-
+                self.stage_label.config(
+                    text=f"Рекомендуемое положение: {FINAL_POSITION}",
+                    fg="yellow"
+                )
         # === ALARM ===
         if self.state.alarm_triggered and not self.alarm_fired:
             self.alarm_fired = True
